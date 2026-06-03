@@ -15,7 +15,7 @@ async def root():
 client = None
 
 
-client = genai.Client(os.environ.get("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 class QueryRequest(BaseModel):
     context: str
