@@ -35,12 +35,12 @@ async def ask_demini(payload: QueryRequest):
 
         Context: {payload.context}
         Question: {payload.question}
-        Asnwer:
+        Answer:
         """
 
         response = client.models.generate_content(
             model='gemini-1.5-flash',
-            contenxt=prompt,
+            context=prompt,
         )
         return {"answer": response.text}
         
