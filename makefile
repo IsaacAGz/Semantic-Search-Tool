@@ -1,11 +1,14 @@
 VENV_BIN = venv/Scripts/python
 PIP = venv/Scripts/pip
 
-.PHONY: setup run clean
+.PHONY: setup install run clean
 
 setup:
 	python -m venv venv
-	$(PIP) install --upgrade pip
+	$(VENV_BIN) -m pip install --upgrade pip
+	$(PIP) install -r requirements.txt
+
+install:
 	$(PIP) install -r requirements.txt
 
 run:
