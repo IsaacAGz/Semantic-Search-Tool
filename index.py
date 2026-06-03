@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
-import google as genai
+from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,8 +14,8 @@ async def root():
 
 client = None
 
-if os.environ.get("GEMINI_API_KEY"):
-    client= genai.Client()
+
+client = genai.Client(os.environ.get("GEMINI_API_KEY"))
 
 class QueryRequest(BaseModel):
     context: str
