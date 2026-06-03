@@ -1,19 +1,21 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
-import google.generativeai as genai
-from dotenv import load_model, load_dotenv
+import google as genai
+from dotenv import load_dotenv
 
 load_dotenv()
+
 app = FastAPI()
 
 @app.get("/")
 async def root():
     return{"return": "healthy", "message": "FastAPI is running on Vercel!"}
 
-api_key = os.environ.get("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+client = None
+
+if os.environ.get("GEMINI_API_KEY"):
+    client= genai.Client()
 
 class QueryRequest(BaseModel):
     context: str
@@ -21,9 +23,13 @@ class QueryRequest(BaseModel):
 
 @app.post("/api/ask")
 async def ask_demini(payload: QueryRequest):
+    if not os.environ.get("GEMINI_API_KEY"):
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured on the server.")
+    
+    if client is None:
+        raise HTTPException(status_code=500, detail="AI Client failed to initialize.")
+    
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-
         prompt = f"""
         You are a lightweight AI assitant. Use the following context to answer the the user's questions concisely.
 
@@ -32,7 +38,10 @@ async def ask_demini(payload: QueryRequest):
         Asnwer:
         """
 
-        response = model.generative_content(prompt)
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contenxt=prompt,
+        )
         return {"answer": response.text}
         
     except Exception as e:
