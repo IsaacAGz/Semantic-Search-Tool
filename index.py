@@ -66,7 +66,7 @@ async def ask_demini(payload: QueryRequest):
 
         # Sort chunks by score and pick top chunks from context to answer user question
         scored_chunks.sort(key=lambda x: x[0], reverse=True)
-        top_matches = [item[1] for items in scored_chunks[:2]]
+        top_matches = [item[1] for item in scored_chunks[:2]]
 
         # Combine matching context
         optimized_context = "\n".join(top_matches)
