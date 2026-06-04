@@ -16,7 +16,7 @@ async def root():
 client = None
 
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY")) if os.environ.get("GEMINI_API_KEY") else None
 
 class QueryRequest(BaseModel):
     context: str
@@ -31,6 +31,14 @@ def get_embedding(text: str):
     
     return response.embeddings[0].values
 
+def get_embeddings_batch(text: list[str]):
+    """Batch requests together"""
+    response = client.models.embed_content(
+        model="gemini-embedding-001",
+        contets=text
+    )
+    return [emb.values for emb in response.embeddings]
+
 def cosine_similarity(v1, v2):
     """Helper function to calculate cosine similarity between two embedding vectors"""
     dot_product = np.dot(v1,v2)
@@ -41,11 +49,8 @@ def cosine_similarity(v1, v2):
 
 @app.post("/api/ask")
 async def ask_demini(payload: QueryRequest):
-    if not os.environ.get("GEMINI_API_KEY"):
+    if not os.environ.get("GEMINI_API_KEY") or client is None:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured on the server.")
-    
-    if client is None:
-        raise HTTPException(status_code=500, detail="AI Client failed to initialize.")
     
     try:
         # Split into distinct lines / paragraphs
@@ -57,11 +62,12 @@ async def ask_demini(payload: QueryRequest):
         # Embedded user question 
         question_vector = get_embedding(payload.question)
 
+        chunk_vectors = get_embeddings_batch(chunks)
+
         # Perform vector search
         scored_chunks = []
-        for chunk in chunks:
-            chunk_vector = get_embedding(chunk)
-            score = cosine_similarity(question_vector, chunk)
+        for chunk, chunk_vector in zip(chunks, chunk_vectors):
+            score = cosine_similarity(question_vector, chunk_vector)
             scored_chunks.append((score, chunk))
 
         # Sort chunks by score and pick top chunks from context to answer user question
