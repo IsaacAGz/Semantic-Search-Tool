@@ -29,7 +29,7 @@ def get_embedding(text: str):
         contents=text
         )
     
-    return response.embedding[0].values
+    return response.embeddings[0].values
 
 def cosine_similarity(v1, v2):
     """Helper function to calculate cosine similarity between two embedding vectors"""
