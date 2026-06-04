@@ -35,7 +35,7 @@ def get_embeddings_batch(text: list[str]):
     """Batch requests together"""
     response = client.models.embed_content(
         model="gemini-embedding-001",
-        contets=text
+        contents=text
     )
     return [emb.values for emb in response.embeddings]
 
