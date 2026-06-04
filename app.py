@@ -53,6 +53,9 @@ with col2:
 
                         st.success("Analysis Complete!")
                         st.info(result.get("answer", "No answer found in response."))
+
+                        #st.markdown("### 🛠️ Raw JSON Response Metadata")
+                        #st.json(result)
                     else:
                         st.error(f"Backend Error (Status {response.status_code}): {response.text}")
 
