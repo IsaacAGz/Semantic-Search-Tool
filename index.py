@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+import hashlib
 from pydantic import BaseModel
 import os
 from google import genai
@@ -6,15 +7,13 @@ from dotenv import load_dotenv
 import numpy as np
 
 load_dotenv()
-
 app = FastAPI()
 
 @app.get("/")
 async def root():
     return{"return": "healthy", "message": "FastAPI is running on Vercel!"}
 
-client = None
-
+context_storage = {}
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY")) if os.environ.get("GEMINI_API_KEY") else None
 
@@ -53,16 +52,32 @@ async def ask_demini(payload: QueryRequest):
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured on the server.")
     
     try:
-        # Split into distinct lines / paragraphs
-        chunks = [c.strip() for c in payload.context.split("\n") if len(c.strip()) > 10]
-
-        if not chunks: 
-            raise HTTPException(status_code=400, detail="provide context is too short to parse.")
+        # Unique Hash for context, used to caching
+        context_hash = hashlib.sha256(payload.context.encode()).hexdigest()
         
+        if context_hash in context_storage:
+            print("--- CACHE HIT: Reusing existing embeddings ---")
+            stored_data = context_storage[context_hash]
+            chunks = stored_data["chunks"]
+            chunk_vectors = stored_data["vector"]
+        else:
+            print("--- CACHE MISS: Calculatin new embeddings ---")
+        
+            # Split into distinct lines / paragraphs
+            chunks = [c.strip() for c in payload.context.split("\n") if len(c.strip()) > 10]
+
+            if not chunks: 
+                raise HTTPException(status_code=400, detail="provide context is too short to parse.")
+            
+            # Get embedding chunks and store them.
+            chunk_vectors = get_embeddings_batch(chunks)
+            context_storage[context_hash] = {
+                "chunks": chunks,
+                "vector": chunk_vectors
+            }
+              
         # Embedded user question 
         question_vector = get_embedding(payload.question)
-
-        chunk_vectors = get_embeddings_batch(chunks)
 
         # Perform vector search
         scored_chunks = []
@@ -72,7 +87,7 @@ async def ask_demini(payload: QueryRequest):
 
         # Sort chunks by score and pick top chunks from context to answer user question
         scored_chunks.sort(key=lambda x: x[0], reverse=True)
-        top_matches = [item[1] for item in scored_chunks[:2]]
+        top_matches = [item[1] for item in scored_chunks[:3]]
 
         # Combine matching context
         optimized_context = "\n".join(top_matches)
